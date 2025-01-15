@@ -100,11 +100,11 @@ The output above tells us that our of the 100 gene in our dataset, 69 genes are 
 Now, let's visualize the graph of our network along with the top 10 hub genes based on degree:
 
 ```python
-# Visualize the network 
-plt.figure(figsize=(10, 8))
+# Visualize the network with all gene names as labels
+plt.figure(figsize=(12, 10))
 pos = nx.spring_layout(combined_network, seed=42)
-nx.draw(combined_network, pos,with_labels=False, node_size=20, edge_color="lightblue")
-plt.title("Gene Co-expression Network")
+nx.draw(combined_network, pos, with_labels=False, node_size=20, edge_color="lightblue")
+nx.draw_networkx_labels(combined_network, pos, labels={node: node for node in combined_network.nodes}, font_size=7)
 plt.show()
 
 # identify hub genes in network
@@ -115,6 +115,233 @@ print(sorted_genes[:10])
 ```
 Which produces the following output:
 
-<img width="600" alt="Screenshot 2025-01-15 at 1 37 42 PM" src="https://github.com/user-attachments/assets/ee66bf64-d852-4b3f-a0de-dc37f43878c8" />
+<img width="600" alt="Screenshot 2025-01-15 at 3 05 22 PM" src="https://github.com/user-attachments/assets/0320b6e7-475b-4fc1-bc01-5c1f76425ca6" />
 
 - ```Top 10 hub genes:[('Trappc10', 32), ('Gpr107', 32), ('Mkrn2', 31), ('Tfe3', 31), ('Brat1', 30), ('Dlat', 30), ('Hnrnpd', 30), ('Nalcn', 30), ('Dgke', 30), ('Cdh4', 29)]```
+
+In the figure above you can see the gene co-expression network with nodes labeled by gene name. Additionally, the code outputs the top 10 hub genes in the co-expression network, ranked by the degree (i.e., the number of connections) each gene has. For example, Trappc10 has 32 connections (edges), meaning it is co-expressed with 33 other genes are or above the threshold correlation of 0.7. 
+
+Using the degree to rank nodes is a simple and intuituve way to identify hub genes, as it reflects how many other genes a particular gene is co-expressed with above the threshold. However, we can also use more sophisticated metrics like degree centrality, clustering coefficient, betweenness centrality, and eigenvector centrality, which provide additional insights into the network structure and relationships between nodes, which we'll explore in the next section below. 
+
+## 🧬 Exploring Gene Co-Expression Network Connectivity
+In the last sub-section, I introduced the metrics degree, degree centrality, clustering coefficient, betweenness centrality, and eigenvector centrality. Each of these metrics has it's own strengths and advantages, which I'll briefly outline below:
+
+- ```Degree```: The degree is the number of edges (connections) that a given node has, which reflects how many other genes a given gene is co-expressed with. This measurement provides a simple and fast measurement of network connectivity, despite it's simplicity. 
+- ```Degree Centrality:``` Degree centrality normalizes the degree of a node by dividing it by the maximum possible degree in the network. As a result, degree centrality gives a relative measure of how connected a node is compared to others in the network, making it a useful metric when comparing nodes in networks of different sizes.
+- ```Clustering Coefficient:``` The clusterng coefficient of a node measures the connectivity of a node's neighbors, indicating how close they are to forming a complete (i.e. fully connected) graph. This measure is useful for understanding localized network structure and helps identify genes that are part of tightly connected modules.
+- ```Betweeness Centrality:``` Betweeness centrality measures the frequency at which a node appears on the shortest paths between other nodes in the network, and as a result it identifies nodes that act as bridges or bottlenecks in the network. Nodes that rank highly on betweenness centrality may serve as critical regulators or mediators in the network. 
+- ```Eigenvector Centrality:``` This metric measures a node's influence in the network based on the influence of its neighbors. High eigenvector centrality indicates a gene is connected to many well-connected nodes, and as a result it identifies nodes with influence beyond their immediate connections (i.e. nodes with "global" influence). 
+
+For co-expression networks, degree, degree centrality, and clustering coefficient are most commonly used. However, if you're analyzing regulatory hubs or genes involved in key pathways, eigenvector or betweenness centrality could provide deeper insights. In the code below, we'll identify the top 10 hub genes baseds on degree centrality, clustering coefficient, betweeness centrality, and eigenvector centrality, and then we'll visualize sub-plots for each of these sets of hub genes:
+
+```python
+# Identify hub genes for each metric
+degree_centrality = nx.degree_centrality(combined_network)
+sorted_centrality = sorted(degree_centrality.items(), key=lambda x: x[1], reverse=True)
+clustering = nx.clustering(combined_network)
+sorted_clustering = sorted(clustering.items(), key=lambda x: x[1], reverse=True)
+betweenness = nx.betweenness_centrality(combined_network)
+sorted_betweenness = sorted(betweenness.items(), key=lambda x: x[1], reverse=True)
+eigenvector = nx.eigenvector_centrality(combined_network)
+sorted_eigenvector = sorted(eigenvector.items(), key=lambda x: x[1], reverse=True)
+
+# Select top 10 genes for each metric
+top_degree_centrality_genes = [gene for gene, _ in sorted_centrality[:10]]
+top_clustering_genes = [gene for gene, _ in sorted_clustering[:10]]
+top_betweenness_genes = [gene for gene, _ in sorted_betweenness[:10]]
+top_eigenvector_genes = [gene for gene, _ in sorted_eigenvector[:10]]
+
+# Create subgraphs
+subgraph_degree_centrality = combined_network.subgraph(top_degree_centrality_genes)
+subgraph_clustering = combined_network.subgraph(top_clustering_genes)
+subgraph_betweenness = combined_network.subgraph(top_betweenness_genes)
+subgraph_eigenvector = combined_network.subgraph(top_eigenvector_genes)
+
+# Plot subgraphs
+fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+
+# Degree Centrality Subgraph
+nx.draw(subgraph_degree_centrality,ax=axes[0, 0],with_labels=True,node_size=500,node_color="skyblue",font_size=10,edge_color="gray",)
+axes[0, 0].set_title("Top 10 by Degree Centrality")
+
+# Clustering Coefficient Subgraph
+nx.draw(subgraph_clustering,ax=axes[0, 1],with_labels=True,node_size=500,node_color="lightgreen",font_size=10,edge_color="gray",)
+axes[0, 1].set_title("Top 10 by Clustering Coefficient")
+
+# Betweenness Centrality Subgraph
+nx.draw(subgraph_betweenness,ax=axes[1, 0],with_labels=True,node_size=500,node_color="salmon",font_size=10,edge_color="gray",)
+axes[1, 0].set_title("Top 10 by Betweenness Centrality")
+
+# Eigenvector Centrality Subgraph
+nx.draw(subgraph_eigenvector, ax=axes[1, 1],with_labels=True,node_size=500,node_color="plum",font_size=10,edge_color="gray",)
+axes[1, 1].set_title("Top 10 by Eigenvector Centrality")
+
+plt.tight_layout()
+plt.show()
+```
+<img width="600" alt="Screenshot 2025-01-15 at 3 24 27 PM" src="https://github.com/user-attachments/assets/098b2ba5-8aac-4605-b1c5-0cbeb603a551" />
+
+As you can see in the figure above, analysis identified key genes in the co-expression network based on four centrality measures, each of which highlights different aspects of network topology, revealing the roles of these genes within the broader network structure.
+- Top Genes By Degree Centrality: The genes with the highest degree centrality, such as Trappc10 and Gpr107, are highly connected within the network, indicating they may act as hubs coordinating interactions among other genes. These hubs are critical for the overall cohesion and robustness of the network.
+- Top Genes by Clustering Coefficient: Several genes, including Cdc45, Fap, and Btbd17, had clustering coefficients of 1.0, suggesting they form tightly interconnected clusters. This implies that these genes might belong to highly specialized or functionally coherent modules within the network.
+- Top Genes by Betweenness Centrality: Genes like Mkrn2, Comt, and Rtca exhibited high betweenness centrality, indicating their importance as bridges or intermediaries connecting different parts of the network. These genes could play a pivotal role in the flow of information or regulation between gene modules.
+- Top Genes by Eigenvector Centrality: Genes such as Gpr107 and Trappc10 were ranked highest by eigenvector centrality, reflecting their influence in the network through their connections to other well-connected genes. These genes may be critical for maintaining the overall regulatory structure of the network.
+
+Now that we've explored the combined network for our treatment (5xFAD mice) and control (corrsesponding WT mice) samples, we'll analyse the co-expression networks for each of these groups seperatley.
+
+## 🧬 Exploring Gene Co-Expression Networks For Treatment and Control Samples (Seperatley)
+As previously mentioned separate co-expression analyses for the treatment and control groups are particularly useful if you are interested in comparing network structures and identifying condition-specific modules or hub genes. By analyzing each group independently, you can uncover gene modules that are unique to a specific condition. For instance, modules found only in the 5xFAD group may represent biological pathways disrupted in Alzheimer’s disease, while those unique to the WT group may reflect normal regulatory networks. This approach also allows you to compare network properties such as connectivity, hub gene identification, and module composition between the two groups, which can reveal critical differences in gene regulation under disease versus normal conditions.
+
+In the code block below, we'll create gene co-expression networks for our 5xFAD mouse samples and WT control samples, then identify the hub genes in each network:
+
+```python
+# Subset the data to exclude rows with NaN values in the "Gene_Name" column
+data = data.dropna(subset=["Gene_Name"])
+
+# Subset data for 5xFAD (mutant) and BL6 (WT) groups separately
+five_x_fad_data = data.filter(regex="5xFAD")  # Select columns with "5xFAD" in their names
+wt_data = data.filter(regex="BL6")  # Select columns with "BL6" in their names
+
+# Ensure the expression data is numeric
+five_x_fad_data_numeric = five_x_fad_data.apply(pd.to_numeric, errors='coerce')
+wt_data_numeric = wt_data.apply(pd.to_numeric, errors='coerce')
+
+# Set Gene_Name as the index for easier gene identification
+five_x_fad_data_numeric = five_x_fad_data_numeric.set_index(data["Gene_Name"])
+wt_data_numeric = wt_data_numeric.set_index(data["Gene_Name"])
+
+# Select the first 100 rows (genes) for each group
+five_x_fad_data_numeric = five_x_fad_data_numeric.iloc[:100, :]
+wt_data_numeric = wt_data_numeric.iloc[:100, :]
+
+# Transpose the expression data to focus on gene co-expression (genes as rows)
+five_x_fad_transposed = five_x_fad_data_numeric.T  # Transpose for co-expression (samples as rows)
+wt_transposed = wt_data_numeric.T  # Transpose for WT group
+
+# Function to calculate pairwise correlations
+def calculate_correlation_matrix(expression_data):
+
+    correlation_matrix = expression_data.corr(method="spearman")  # Spearman correlation
+    return correlation_matrix
+
+# Calculate the correlation matrices separately for 5xFAD and WT groups
+five_x_fad_corr_matrix = calculate_correlation_matrix(five_x_fad_transposed)
+wt_corr_matrix = calculate_correlation_matrix(wt_transposed)
+
+# Create networks for both treatment and control groups
+def create_network(corr_matrix, threshold=0.7):
+    G = nx.Graph()
+    for i, gene1 in enumerate(corr_matrix.index):
+        for j, gene2 in enumerate(corr_matrix.columns):
+            if i < j:  # Avoid duplicate pairs
+                correlation = corr_matrix.iloc[i, j]
+                if abs(correlation) >= threshold:  # Apply threshold
+                    G.add_edge(gene1, gene2, weight=correlation)
+    return G
+
+# Create networks for 5xFAD and WT
+five_x_fad_network = create_network(five_x_fad_corr_matrix)
+wt_network = create_network(wt_corr_matrix)
+
+# Plot side-by-side subgraphs
+plt.figure(figsize=(14, 6))
+plt.subplot(1, 2, 1)  # 1 row, 2 columns, first subplot
+pos_five_x_fad = nx.spring_layout(five_x_fad_network, seed=42)
+nx.draw(five_x_fad_network, pos_five_x_fad, with_labels=False, node_size=20, edge_color="lightblue")
+plt.title("5xFAD Gene Co-expression Network")
+plt.subplot(1, 2, 2)  # 1 row, 2 columns, second subplot
+pos_wt = nx.spring_layout(wt_network, seed=42)
+nx.draw(wt_network, pos_wt, with_labels=False, node_size=20, edge_color="lightgreen")
+plt.title("WT Gene Co-expression Network")
+plt.tight_layout()
+plt.show()
+
+# Identify and print top 10 hub genes for both networks
+five_x_fad_degrees = dict(five_x_fad_network.degree())
+sorted_five_x_fad_genes = sorted(five_x_fad_degrees.items(), key=lambda x: x[1], reverse=True)
+print("Top 10 hub genes in 5xFAD network:")
+print(sorted_five_x_fad_genes[:10])
+wt_degrees = dict(wt_network.degree())
+sorted_wt_genes = sorted(wt_degrees.items(), key=lambda x: x[1], reverse=True)
+print("\nTop 10 hub genes in WT network:")
+print(sorted_wt_genes[:10])
+```
+<img width="900" alt="Screenshot 2025-01-15 at 3 37 49 PM" src="https://github.com/user-attachments/assets/c62176ba-fca4-49ed-ab6b-6d5c0e48f9bf" />
+
+Now that we've created two seperate gene co-expression networks, there are several interesting analyses you can perform. To start, let's compare the density of both networks, which will tell us how well connected the genes are in each group:
+
+```python
+density_five_x_fad = nx.density(five_x_fad_network)
+density_wt = nx.density(wt_network)
+print(f"Density of 5xFAD network: {density_five_x_fad}")
+print(f"Density of WT network: {density_wt}")
+```
+Which produces the following output:
+- ```Density of 5xFAD network: 0.18991640543364682```
+- ```Density of WT network: 0.253140871424752```
+
+Based on the results above, we can see that the density of the 5xFAD network is relatively low, indicating that the gene co-expression relationships in this network are sparser. This may suggest that the regulatory relationships between genes in the 5xFAD condition are more selective or disrupted compared to the WT condition, which may reflect altered or less cohesive interactions in the disease state (we should be careful to overinterpret these findings as we are not using the entire dataset for these analysis). Additionally, we can see that the WT network has a higher density, implying that the gene co-expression relationships in the control (wild-type) samples are more interconnected, which could indicate a more robust and tightly regulated gene network under normal physiological conditions. 
+
+Next, we'll look at the average degree of nodes in each network, which can indicate the overall connectivity in each condition:
+
+```python
+avg_degree_five_x_fad = sum(dict(five_x_fad_network.degree()).values()) / len(five_x_fad_network.nodes)
+avg_degree_wt = sum(dict(wt_network.degree()).values()) / len(wt_network.nodes)
+print(f"Average degree in 5xFAD network: {avg_degree_five_x_fad}")
+print(f"Average degree in WT network: {avg_degree_wt}")
+```
+- ```Average degree in 5xFAD network: 16.522727272727273```
+- ```Average degree in WT network: 21.770114942528735```
+
+As expected bases on the previous analysis, the 5xFAD network has a lower average degree than the WT network. Now that we've highlighted some differences between the two networks, we'll perform a cross-network hub gene analysis to see if there are any overlapping hub genes between the two networks:
+
+```python
+# Set of hub genes for 5xFAD and WT networks
+hub_genes_five_x_fad = set([gene for gene, degree in sorted_five_x_fad_genes[:10]])
+hub_genes_wt = set([gene for gene, degree in sorted_wt_genes[:10]])
+
+# Find common and unique hub genes
+common_hub_genes = hub_genes_five_x_fad.intersection(hub_genes_wt)
+unique_five_x_fad_hub_genes = hub_genes_five_x_fad - hub_genes_wt
+unique_wt_hub_genes = hub_genes_wt - hub_genes_five_x_fad
+print(f"Common hub genes: {common_hub_genes}")
+print(f"Unique 5xFAD hub genes: {unique_five_x_fad_hub_genes}")
+print(f"Unique WT hub genes: {unique_wt_hub_genes}")
+```
+- ```Common hub genes: {'Trappc10', 'Hnrnpd', 'Gpr107'}```
+- ```Unique 5xFAD hub genes: {'Tfe3', 'Itga5', 'Nalcn', 'Acvr1b', 'Xpo6', 'Dgke', 'Scmh1'}```
+- ```Unique WT hub genes: {'Mkrn2', 'Raf1', 'Sox9', 'Brat1', 'Fer', 'Gna12', 'Gnai3'}```
+
+The analysis above reveals three common hub genes between the 5xFAD and WT networks including Hnrnpd, Trappc10, and Gpr107, which suggests these genes may play a central role in maintaining core co-expression relationships in both conditions. However, the networks also exhibit distinct unique hub genes, with seven genes exclusive to the 5xFAD network  and seven genes unique to the WT network. These unique hub genes likely reflect condition-specific regulatory roles, with 5xFAD-specific hubs potentially driving processes related to Alzheimer’s pathology, while WT-specific hubs maintain normal regulatory functions. 
+
+Finally, we'll look at edge weight distributions, which allows us to compare the distribution of correlation strengths between the 5xFAD and WT networks, telling us if certain gene pairs have stronger or weaker co-expression in one group compared to another:
+
+```python
+# Extract edge weights from 5xFAD and WT networks
+edge_weights_five_x_fad = [data['weight'] for _, _, data in five_x_fad_network.edges(data=True)]
+edge_weights_wt = [data['weight'] for _, _, data in wt_network.edges(data=True)]
+plt.figure(figsize=(10, 6))
+plt.hist(edge_weights_five_x_fad, bins=30, alpha=0.5, label='5xFAD')
+plt.hist(edge_weights_wt, bins=30, alpha=0.5, label='WT')
+plt.legend()
+plt.title('Edge Weight Distribution Comparison')
+plt.xlabel('Edge Weight (Correlation)')
+plt.ylabel('Frequency')
+plt.show()
+```
+<img width="644" alt="Screenshot 2025-01-15 at 3 50 35 PM" src="https://github.com/user-attachments/assets/8672fdda-3b1e-4da7-9bf7-5a8cc20a22f6" />
+
+The edge weight distributions reveal notable differences in co-expression patterns between the 5xFAD and WT networks. The WT network exhibits a higher frequency of strong positive correlations (edge weights in the 0.75 to 1.0 range), suggesting more robust and coordinated gene expression relationships under normal conditions. In contrast, the 5xFAD network shows a stronger presence of negative correlations (edge weights around -0.75. These findings suggest that Alzheimer's pathology in the 5xFAD model may disrupt the normal regulatory architecture, reducing positive co-expression while introducing dysregulated, oppositional interactions between genes, which may contribute to disease-specific processes.
+
+# 🧬 If You Enjoy This Guide...
+## You May Also Enjoy the Following DIY Guides...
+- [Python Fundamentals For Biologists](https://github.com/evanpeikon/Python_Fundamentals_Biology)
+- [Bash Fundamentals For Bioinformatics](https://github.com/evanpeikon/bash_fundamentals)
+- [Assorted Functions In Numerical Methods & Systems Biology](https://github.com/evanpeikon/systems_biology)
+- [Introduction to Functional Enrichment Analysis](https://github.com/evanpeikon/functional_enrichment_analysis)
+- [From Genes to Networks: Uncovering Biological Insights through Protein-Protein Interactions](https://github.com/evanpeikon/PPI_Network_Analysis)
+
+
+
+
+
