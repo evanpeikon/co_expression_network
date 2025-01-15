@@ -39,5 +39,56 @@ import seaborn as sns
 
 # Load the count list CSV
 file_path = 'countlist_5xFAD.csv'  # Path to your CSV file
-data = pd.read_csv(file_path, index_col=0) 
+data = pd.read_csv(file_path, index_col=0)
+
+# Subset the data to the first 100 rows (genes) for testing 
+data = data.dropna(subset=["Gene_Name"]) # Drop Gene_Name column 
+data_subset = data.iloc[:100, :]  # Select the first 100 rows (genes)
+data_subset = data_subset.set_index("Gene_Name") # Set Gene_Name as index
+
+# Ensure the expression data is numeric
+expression_data_numeric = data_subset.apply(pd.to_numeric, errors='coerce')
+
+# Transpose the expression data to focus on gene co-expression (genes as columns)
+expression_data_transposed = expression_data_numeric.T  
+
+# Function to calculate pairwise correlations 
+def calculate_correlation_matrix(expression_data):
+    correlation_matrix = expression_data.corr(method="spearman")  # Spearman correlation
+    return correlation_matrix
+
+# Perform combined co-expression analysis and then display first few rows of results data frame 
+combined_corr_matrix = calculate_correlation_matrix(expression_data_transposed)
+combined_corr_matrix.head()
 ```
+<img width="1198" alt="Screenshot 2025-01-15 at 10 53 54 AM" src="https://github.com/user-attachments/assets/bf6195bd-6d47-44f5-b7d2-3b699eb844e9" />
+
+As you can see, the output above is a correlation matrix generated from our gene expression dataset using Spearman correlation. Note, that the matrix has the same set of genes in both the rows and columns (it's an 100x100 matrix). Each cell in the matrix represents the pairwise Spearman correlation between two genes based on their expression profiles across all samples. The diagonal values are all 1.0 because each gene is perfectly correlated with itself, and the off diagonal values represent the Spearman correlation coefficient between pairs of genes (the coefficient ranges from -1, which is a perfect negative correlation, to 1, which is a perfect positive correlation). Additionally, you'll note that some cells in the matrix show an NaN value. This occurs when at least one of the genes in a pair has constant expression across all samples (i.e., no variation) or when the gene has a very low (near zero) expression level across samples. 
+
+Now that we've created our correlation matrix, we'll use it as input to create a co-expression network, as demonstrated below:
+
+```python
+# Create a Network from the Correlation Matrix
+def create_network(corr_matrix, threshold=0.7):
+    """
+    Creates a co-expression network from a correlation matrix.
+    Only edges with correlation >= threshold are added.
+    """
+    G = nx.Graph()
+    for i, gene1 in enumerate(corr_matrix.index):
+        for j, gene2 in enumerate(corr_matrix.columns):
+            if i < j:  # Avoid duplicate pairs
+                correlation = corr_matrix.iloc[i, j]
+                if abs(correlation) >= threshold:  # Apply threshold
+                    G.add_edge(gene1, gene2, weight=correlation)
+    return G
+
+# Define threshold for correlation
+threshold = 0.7  
+
+# Create combined network for all samples and analyze the combined network 
+combined_network = create_network(combined_corr_matrix, threshold)
+print(f"Combined Network: {combined_network.number_of_nodes()} nodes and {combined_network.number_of_edges()} edges")
+```
+Which produces the following output:
+- ```Combined Network: 69 nodes and 583 edges```
