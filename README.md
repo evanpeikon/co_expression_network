@@ -94,3 +94,27 @@ print(f"Combined Network: {combined_network.number_of_nodes()} nodes and {combin
 ```
 Which produces the following output:
 - ```Combined Network: 69 nodes and 583 edges```
+
+The output above tells us that our of the 100 gene in our dataset, 69 genes are included in our co-expression network and there are 586 edges (connections) between these genes. The reason we have 69 nodes in the network, and not 100, is that some genes may not have have a significant correlation (above ```threshold = 0.7```) with any other genes, and as a result they are excluded from the network. The edges in our network represent pairwise relationships between genes based on their correlation. In other words,  an edge exists between two genes if the absolute value of their correlation is greater than or equal to the threshold of 0.7. 
+
+Now, let's visualize the graph of our network along with the top 10 hub genes based on degree:
+
+```python
+# Visualize the network 
+plt.figure(figsize=(10, 8))
+pos = nx.spring_layout(combined_network, seed=42)
+nx.draw(combined_network, pos,with_labels=False, node_size=20, edge_color="lightblue")
+plt.title("Gene Co-expression Network")
+plt.show()
+
+# identify hub genes in network
+degrees = dict(combined_network.degree())
+sorted_genes = sorted(degrees.items(), key=lambda x: x[1], reverse=True)
+print("Top 10 hub genes:")
+print(sorted_genes[:10])
+```
+Which produces the following output:
+
+<img width="600" alt="Screenshot 2025-01-15 at 1 37 42 PM" src="https://github.com/user-attachments/assets/ee66bf64-d852-4b3f-a0de-dc37f43878c8" />
+
+- ```Top 10 hub genes:[('Trappc10', 32), ('Gpr107', 32), ('Mkrn2', 31), ('Tfe3', 31), ('Brat1', 30), ('Dlat', 30), ('Hnrnpd', 30), ('Nalcn', 30), ('Dgke', 30), ('Cdh4', 29)]```
