@@ -58,3 +58,6 @@ countlist_5xFAD = countlist_5xFAD[cols]
 
 # view first 5 rows of data
 countlist_5xFAD.head()
+
+# rename countlist_5xFAD for use in tutorial 
+data = countlist_5xFAD
