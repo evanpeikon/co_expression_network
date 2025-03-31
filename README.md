@@ -6,6 +6,8 @@ One of the most widely adopted tools for constructing co-expression networks is 
 
 This guide will introduce you to the principles of co-expression network analysis, walk you through constructing a co-expression network using WGCNA, and demonstrate how to identify key modules and hub genes associated with specific biological traits. Let’s get started!
 
+> PS: [SmallSeqFlow](https://github.com/evanpeikon/SmallSeqFlow) now includes a function for gene co-expression analysis, making it easy to analyze co-expression networks from bulk RNA-seq data with just a few lines of code. 
+
 ## 🧬 How Does Co-Expression Network Analysis Differ from PPI Network Analysis?
 As we’ve established, co-expression networks are a valuable tool for exploring transcriptional regulation and identifying coordinated patterns of gene expression. By grouping co-expressed genes into modules, researchers can uncover functionally related gene sets, correlate these modules with external traits, and pinpoint key regulatory genes. However, you might wonder how this approach differs from protein-protein interaction (PPI) network analysis—a topic I previously discussed in a tutorial titled [From Genes to Networks: Uncovering Biological Insights through Protein-Protein Interactions](https://github.com/evanpeikon/PPI_Network_Analysis)/
 
